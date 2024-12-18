@@ -36,7 +36,6 @@ def connect_theme_db():
     conn.commit()
     conn.close()
 
-
 # Create or connect to SQLite database for questions
 def connect_db():
     conn = sqlite3.connect("xert.db")
@@ -58,13 +57,6 @@ def connect_db():
             entry_foreground TEXT NOT NULL
         )
     """)
-
-    cursor.execute("SELECT COUNT(*) FROM themes")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO themes (name, background_color, foreground_color, entry_background, entry_foreground) VALUES (?, ?, ?, ?, ?)",
-                       ("Dark", "black", "white", "gray", "white"))
-        cursor.execute("INSERT INTO themes (name, background_color, foreground_color, entry_background, entry_foreground) VALUES (?, ?, ?, ?, ?)",
-                       ("Light", "white", "black", "white", "black"))
     
     conn.commit()
     conn.close()
@@ -181,7 +173,7 @@ def change_theme(selected_theme_index):
         style.configure("TLabel", background=selected_theme[2], foreground=selected_theme[3])
         style.configure("TEntry", fieldbackground=selected_theme[4], foreground=selected_theme[5])
         style.configure("TButton", background=selected_theme[4], foreground=selected_theme[3])
-        tree.configure(style='dark.Treeview' if selected_theme[1] == 'Dark' else 'light.Treeview')
+        tree.configure(style='theme.Treeview')
 
         # Update user theme preference in 'salar.db'
         execute_sql("salar.db", "UPDATE user_settings SET theme_id = ?", (selected_theme[0],))
@@ -313,16 +305,75 @@ def update_theme_menu():
     theme_menu.add_separator()
     create_theme_menu(theme_menu)
 
+def check_and_display_welcome_message():
+    conn = sqlite3.connect("num.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT first_time FROM user_status WHERE id = 1")
+    result = cursor.fetchone()
+
+    # اگر مقدار first_time برابر با 1 باشد، پیام خوش آمدگویی نمایش داده شده و مقدار تغییر می‌کند.
+    if result and result[0] == 1:
+        messagebox.showinfo("Welcome", "Welcome to the Questions Database App!")
+        cursor.execute("UPDATE user_status SET first_time = 0 WHERE id = 1")
+        conn.commit()
+    
+    conn.close()
+
+def connect_num_db():
+    conn = sqlite3.connect("num.db")
+    cursor = conn.cursor()
+    
+    # جدول برای ذخیره‌سازی وضعیت پیام خوش آمدگویی
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_time INTEGER NOT NULL
+        )
+    """)
+    
+    # اگر هیچ رکوردی در جدول نباشد، مقدار پیش‌فرض (اولین اجرا) اضافه می‌شود.
+    cursor.execute("SELECT COUNT(*) FROM user_status")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO user_status (first_time) VALUES (?)", (1,))
+    
+    conn.commit()
+    conn.close()
+
+def reset_databases():
+    # حذف کامل جداول در دیتابیس‌های مختلف
+    execute_sql("xert.db", "DROP TABLE IF EXISTS themes")
+
+    execute_sql("salar.db", "DROP TABLE IF EXISTS user_settings")
+
+    execute_sql("num.db", "DROP TABLE IF EXISTS user_status")
+
+    # ایجاد مجدد دیتابیس‌ها با مقادیر پیش‌فرض
+    connect_db()           # مقداردهی مجدد دیتابیس xert
+    connect_theme_db()     # مقداردهی مجدد دیتابیس salar
+    connect_num_db()       # مقداردهی مجدد دیتابیس num
+
+    # پیام نمایش برای اطلاع به کاربر
+    messagebox.showinfo("Reset Complete", "All databases have been reset. The application will now restart.")
+    
+    # انجام ری‌استارت برنامه
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
+
 
 # Create user interface
 root = tk.Tk()
 root.title("Questions Database")
 
 # Menu Bar
+# Menu Bar
 menu_bar = tk.Menu(root)
+
+# File Menu
 file_menu = tk.Menu(menu_bar, tearoff=0)
 file_menu.add_command(label="Open", command=lambda: messagebox.showinfo("Open", "Open functionality can be implemented."))
 file_menu.add_command(label="Save", command=lambda: messagebox.showinfo("Save", "Save functionality can be implemented."))
+file_menu.add_separator()  # جداکننده برای تفکیک بخش‌های دیگر
+file_menu.add_command(label="Reset Databases", command=reset_databases)  # دکمه ریست دیتابیس
 file_menu.add_separator()
 file_menu.add_command(label="Exit", command=on_exit)
 menu_bar.add_cascade(label="File", menu=file_menu)
@@ -351,8 +402,7 @@ root.config(menu=menu_bar)
 style = ttk.Style()
 style.configure("Treeview", rowheight=25)
 style.configure("TButton", padding=5)
-style.configure('dark.Treeview', background='gray', foreground='white')
-style.configure('light.Treeview', background='white', foreground='black')
+style.configure('theme.Treeview', background='white', foreground='black')
 
 # Connect to databases
 connect_db()
@@ -399,5 +449,11 @@ load_questions()
 
 # Apply the last selected theme and font size
 apply_last_selected_theme()
+connect_db()        
+connect_theme_db()      
+connect_num_db()      
+
+# Check if welcome message should be displayed
+check_and_display_welcome_message()
 
 root.mainloop()
