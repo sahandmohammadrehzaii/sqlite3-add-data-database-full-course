@@ -1,0 +1,11 @@
+
+
+{
+  "name": "ghadaam",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ghadaam",
+    "start": "python main.py"
+  }
+}
