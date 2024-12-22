@@ -44,7 +44,13 @@ def check_access():
 
 def activate_program():
     password_window = tk.Toplevel(root)
-    password_window.title("Enter Activation Code")
+    password_window.title("Enter Activation Code - Ghadaam|team")
+
+    # Prevent interaction with the main window
+    password_window.grab_set()
+
+    # در صورت بستن پنجره فعال‌سازی، برنامه کاملاً بسته شود
+    password_window.protocol("WM_DELETE_WINDOW", lambda: on_exit())  # به جای sys.exit از on_exit استفاده کردیم
 
     tk.Label(password_window, text="Enter 16-Digit Activation Code:").grid(row=0, column=0, padx=10, pady=10)
     entry_password = ttk.Entry(password_window, show="*", width=30)
@@ -55,13 +61,12 @@ def activate_program():
         if entered_password == PERMANENT_PASSWORD:
             execute_sql("database/betf.db", "UPDATE app_access SET access_granted = 1 WHERE id = 1")
             messagebox.showinfo("Success", "Program activated successfully!")
-            password_window.destroy()
-            app_reload()
+            password_window.destroy()  # پنجره فعال‌سازی بسته می‌شود.
+            app_reload()  # برنامه دوباره بارگذاری می‌شود.
         else:
             messagebox.showerror("Error", "Invalid activation code.")
 
     ttk.Button(password_window, text="Activate", command=validate_password).grid(row=2, column=0, padx=10, pady=10)
-
 def app_reload():
     python = sys.executable
     os.execl(python, python, *sys.argv)
@@ -71,7 +76,8 @@ def enforce_access():
     if not check_access():
         msg = """
         Your 30-day trial period has ended.
-        Please enter a 16-digit activation code to unlock the program.
+        Please enter a 16-digit activation code to unlock the 
+        program.
         """
         messagebox.showerror("Activation Required", msg)
         activate_program()
@@ -238,7 +244,7 @@ def open_color_picker(entry):
 
 def open_new_theme_window():
     new_theme_window = tk.Toplevel(root)
-    new_theme_window.title("Create New Theme")
+    new_theme_window.title("Create New Theme - Ghadaam|team")
 
     tk.Label(new_theme_window, text="Theme Name:").grid(row=0, column=0)
     entry_theme_name = tk.Entry(new_theme_window)
